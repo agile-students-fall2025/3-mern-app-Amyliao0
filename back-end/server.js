@@ -1,23 +1,13 @@
 #!/usr/bin/env node
 
-// import the express app
-const server = require('./app')
-require('dotenv').config({ silent: true }) // load environmental variables from a hidden file named .env
+require('dotenv').config({ silent: true });
+const app = require('./app');
 
-// which port to listen for HTTP(S) requests
-const port = process.env.PORT || 3000
+const port = process.env.PORT || 7002;
 
-// call a function to start listening to the port
-const listener = server.listen(port, function () {
-  console.log(`Server running on port: ${port}`)
-})
+const listener = app.listen(port, () => {
+  console.log(`🚀 Backend running at http://localhost:${port}`);
+});
 
-// a function to stop listening to the port
-const close = () => {
-  listener.close()
-}
-
-// export the close function
-module.exports = {
-  close: close,
-}
+const close = () => listener.close();
+module.exports = { close };

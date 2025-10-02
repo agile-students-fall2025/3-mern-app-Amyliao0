@@ -1,82 +1,77 @@
-require('dotenv').config({ silent: true }) // load environmental variables from a hidden file named .env
-const express = require('express') // CommonJS import style!
-const morgan = require('morgan') // middleware for nice logging of incoming HTTP requests
-const cors = require('cors') // middleware for enabling CORS (Cross-Origin Resource Sharing) requests.
-const mongoose = require('mongoose')
+const express  = require('express');
+const morgan   = require('morgan');
+const cors     = require('cors');
+const path     = require('path');
+const mongoose = require('mongoose');
 
-const app = express() // instantiate an Express object
-app.use(morgan('dev', { skip: (req, res) => process.env.NODE_ENV === 'test' })) // log all incoming requests, except when in unit test mode.  morgan has a few logging default styles - dev is a nice concise color-coded style
-app.use(cors()) // allow cross-origin resource sharing
+const app = express();
 
-// use express's builtin body-parser middleware to parse any data included in a request
-app.use(express.json()) // decode JSON-formatted incoming POST data
-app.use(express.urlencoded({ extended: true })) // decode url-encoded incoming POST data
+// Middleware
+app.use(morgan('dev', { skip: () => process.env.NODE_ENV === 'test' }));
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// connect to database
+// Serve all static files from /public
+// This means GET / will serve back-end/public/index.html
+const PUBLIC_DIR = path.join(__dirname, 'public');
+app.use(express.static(PUBLIC_DIR));
+app.use('/static', express.static(PUBLIC_DIR));
+
+// MongoDB connection
 mongoose
-  .connect(`${process.env.DB_CONNECTION_STRING}`)
-  .then(data => console.log(`Connected to MongoDB`))
-  .catch(err => console.error(`Failed to connect to MongoDB: ${err}`))
+  .connect(process.env.DB_CONNECTION_STRING)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('Failed to connect to MongoDB:', err));
 
-// load the dataabase models we want to deal with
-const { Message } = require('./models/Message')
-const { User } = require('./models/User')
+// Models
+const { Message } = require('./models/Message');
+const { User }    = require('./models/User');
 
-// a route to handle fetching all messages
+// ✅ About JSON route (assignment requirement)
+app.get('/api/about', (req, res) => {
+  res.json({
+    name: "Amy Liao",
+    bio: "I am a computer science student passionate about web development and creating user-friendly applications. I enjoy working with the MERN stack and building projects that solve real-world problems.",
+    education: "Currently studying at NYU, pursuing a degree in Computer Science. I have experience with JavaScript, React, Node.js, and MongoDB.",
+    interests: "In my free time, I enjoy coding personal projects, learning new technologies, and contributing to open-source software. I'm particularly interested in full-stack development and web scraping.",
+    imageUrl: "http://localhost:7002/static/images/profile.JPG",
+    contact: {
+      email: "yl11020@nyu.edu",
+      github: "https://github.com/Amyliao0",
+    }
+  });
+});
+
+// Messages API
 app.get('/messages', async (req, res) => {
-  // load all messages from database
   try {
-    const messages = await Message.find({})
-    res.json({
-      messages: messages,
-      status: 'all good',
-    })
+    const messages = await Message.find({});
+    res.json({ messages, status: 'all good' });
   } catch (err) {
-    console.error(err)
-    res.status(400).json({
-      error: err,
-      status: 'failed to retrieve messages from the database',
-    })
+    res.status(400).json({ error: err, status: 'failed to retrieve messages' });
   }
-})
+});
 
-// a route to handle fetching a single message by its id
 app.get('/messages/:messageId', async (req, res) => {
-  // load all messages from database
   try {
-    const messages = await Message.find({ _id: req.params.messageId })
-    res.json({
-      messages: messages,
-      status: 'all good',
-    })
+    const messages = await Message.find({ _id: req.params.messageId });
+    res.json({ messages, status: 'all good' });
   } catch (err) {
-    console.error(err)
-    res.status(400).json({
-      error: err,
-      status: 'failed to retrieve messages from the database',
-    })
+    res.status(400).json({ error: err, status: 'failed to retrieve message' });
   }
-})
-// a route to handle logging out users
+});
+
 app.post('/messages/save', async (req, res) => {
-  // try to save the message to the database
   try {
     const message = await Message.create({
       name: req.body.name,
       message: req.body.message,
-    })
-    return res.json({
-      message: message, // return the message we just saved
-      status: 'all good',
-    })
+    });
+    res.json({ message, status: 'all good' });
   } catch (err) {
-    console.error(err)
-    return res.status(400).json({
-      error: err,
-      status: 'failed to save the message to the database',
-    })
+    res.status(400).json({ error: err, status: 'failed to save message' });
   }
-})
+});
 
-// export the express app we created to make it available to other modules
-module.exports = app // CommonJS export style!
+module.exports = app;
